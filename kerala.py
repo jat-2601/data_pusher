@@ -5,6 +5,35 @@ import pytz
 import pandas as pd
 import re
 import plotly.express as px
+from streamlit_elements import elements, mui, html
+from st_aggrid import AgGrid
+
+# Custom CSS
+custom_css = """
+<style>
+body {
+    background-color: #f0f0f0;
+    font-family: 'Arial', sans-serif;
+}
+
+.stButton>button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 8px;
+}
+</style>
+"""
+
+# Load custom CSS
+st.markdown(custom_css, unsafe_allow_html=True)
 
 # Initialize logs, errors, and users in session state
 if 'logs' not in st.session_state:
@@ -171,7 +200,7 @@ else:
         # Display logs
         df_logs = pd.DataFrame(st.session_state.logs)
         st.subheader('Activity Logs')
-        st.dataframe(df_logs)
+        AgGrid(df_logs)
         # Download logs as CSV or text
         csv_logs = df_logs.to_csv(index=False).encode('utf-8')
         st.download_button(
@@ -190,7 +219,7 @@ else:
         # Display error logs
         df_errors = pd.DataFrame(st.session_state.errors)
         st.subheader('Error Logs')
-        st.dataframe(df_errors)
+        AgGrid(df_errors)
         # Download error logs as CSV or text
         csv_errors = df_errors.to_csv(index=False).encode('utf-8')
         st.download_button(
@@ -208,10 +237,6 @@ else:
         )
 
     # User Management section
-    with tab4:
-        st.header('User Management')
-        st.subheader('Add New User')
-        new_username = st.text_input('New Username')
     with tab4:
         st.header('User Management')
         st.subheader('Add New User')
@@ -258,3 +283,4 @@ else:
             st.plotly_chart(fig)
         else:
             st.write('No logs available for analytics.')
+        
