@@ -5,8 +5,7 @@ import pytz
 import pandas as pd
 import re
 import plotly.express as px
-from streamlit_elements import elements, mui, html
-from st_aggrid import AgGrid
+from st_aggrid import AgGrid, GridOptionsBuilder
 
 # Custom CSS
 custom_css = """
@@ -82,7 +81,6 @@ def extract_data_from_format(data_format):
         st.error('Invalid format. Please ensure the format is correct.')
         log_error("Extract Data", "Invalid format")
         return None, None, None
-
 # Main app
 st.title('State Backend Kerala Tool')
 
@@ -137,7 +135,6 @@ else:
                     st.error(f'Request failed: {e}')
                     log_activity("Send Request", "Failed", f"IMEI: {imei}, Compliance: {compliance}, Error: {e}")
                     log_error("Send Request", str(e))
-
     # Manual Data Sender section
     with tab2:
         st.header('Manual Data Sender')
@@ -145,54 +142,77 @@ else:
         manual_api_url = 'http://103.135.130.119:80'
         # Dropdown to choose input method
         input_method = st.selectbox('Input Method', ['Manual Entry', 'Extract from Format'])
+        
         if input_method == 'Manual Entry':
             # Input fields for parameters
             imei_manual = st.text_input('IMEI for Manual Data (15 digits)', max_chars=15)
             latitude = st.text_input('Latitude')
             longitude = st.text_input('Longitude')
+            
+            if latitude and longitude:
+                # Preview on map using Plotly
+                fig = px.scatter_mapbox(
+                    lat=[latitude],
+                    lon=[longitude],
+                    hover_name=[imei_manual],
+                    hover_data={"Latitude": [latitude], "Longitude": [longitude]},
+                    zoom=10,
+                    height=300,
+                )
+                fig.update_layout(mapbox_style="open-street-map")
+                fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+                fig.add_annotation(
+                    x=0.5,
+                    y=-0.1,
+                    text=f"IMEI: {imei_manual}<br>Date: {datetime.now().strftime('%Y-%m-%d')}<br>Time: {datetime.now().strftime('%H:%M:%S')}<br>Latitude: {latitude}<br>Longitude: {longitude}",
+                    showarrow=False,
+                    xref="paper",
+                    yref="paper",
+                    align="center"
+                )
+                st.plotly_chart(fig)
+        
         else:
             data_format = st.text_area('Data Format')
-        
-        if st.button('Send Manual Data'):
-            if input_method == 'Extract from Format':
+            if st.button('Send Manual Data'):
                 imei_manual, latitude, longitude = extract_data_from_format(data_format)
                 if not imei_manual or not latitude or not longitude:
                     st.error('Failed to extract data from format.')
                     log_activity("Send Manual Data", "Failed", "Failed to extract data from format")
                     pass
-            
-            if imei_manual is None or len(imei_manual) != 15 or not imei_manual.isdigit():
-                st.error('IMEI must be a 15-digit number.')
-                log_activity("Send Manual Data", "Failed", f"Invalid IMEI: {imei_manual}")
-            else:
-                # Get current date and time in Delhi timezone
-                delhi_tz = pytz.timezone('Asia/Kolkata')
-                now = datetime.now(delhi_tz)
-                date_str = now.strftime('%d%m%y')
-                time_str = now.strftime('%H%M%S')
-                # Format the packet
-                packet = f'NRM{imei_manual}01L1{date_str}{time_str}0{latitude}N0{longitude}E404x950D2900DC06A72000.00000.0053001811M0827.00airtel'
-                data = {'vltdata': packet}
-                headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-                try:
-                    response = requests.post(manual_api_url, data=data, headers=headers)
-                    response.raise_for_status()
-                    st.success('Manual data sent successfully!')
-                    st.write(f"Packet Sent: {packet}")
+                
+                if imei_manual is None or len(imei_manual) != 15 or not imei_manual.isdigit():
+                    st.error('IMEI must be a 15-digit number.')
+                    log_activity("Send Manual Data", "Failed", f"Invalid IMEI: {imei_manual}")
+                else:
+                    # Get current date and time in Delhi timezone
+                    delhi_tz = pytz.timezone('Asia/Kolkata')
+                    now = datetime.now(delhi_tz)
+                    date_str = now.strftime('%d%m%y')
+                    time_str = now.strftime('%H%M%S')
+                    # Format the packet
+                    packet = f'NRM{imei_manual}01L1{date_str}{time_str}0{latitude}N0{longitude}E404x950D2900DC06A72000.00000.0053001811M0827.00airtel'
+                    data = {'vltdata': packet}
+                    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
                     try:
-                        response_json = response.json()
-                        st.json(response_json)
-                        log_activity("Send Manual Data", "Success",
-                                     f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Response: {response_json}")
-                    except ValueError:
-                        st.write(response.text)
-                        log_activity("Send Manual Data", "Success",
-                                     f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Response: {response.text}")
-                except requests.exceptions.RequestException as e:
-                    st.error(f'Manual data send failed: {e}')
-                    log_activity("Send Manual Data", "Failed",
-                                 f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Error: {e}")
-                    log_error("Send Manual Data", str(e))
+                        response = requests.post(manual_api_url, data=data, headers=headers)
+                        response.raise_for_status()
+                        st.success('Manual data sent successfully!')
+                        st.write(f"Packet Sent: {packet}")
+                        try:
+                            response_json = response.json()
+                            st.json(response_json)
+                            log_activity("Send Manual Data", "Success",
+                                         f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Response: {response_json}")
+                        except ValueError:
+                            st.write(response.text)
+                            log_activity("Send Manual Data", "Success",
+                                         f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Response: {response.text}")
+                    except requests.exceptions.RequestException as e:
+                        st.error(f'Manual data send failed: {e}')
+                        log_activity("Send Manual Data", "Failed",
+                                     f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Error: {e}")
+                        log_error("Send Manual Data", str(e))
 
     # Activity Logs section
     with tab3:
@@ -200,7 +220,14 @@ else:
         # Display logs
         df_logs = pd.DataFrame(st.session_state.logs)
         st.subheader('Activity Logs')
-        AgGrid(df_logs)
+        if not df_logs.empty:
+            gb = GridOptionsBuilder.from_dataframe(df_logs)
+            gb.configure_pagination()
+            gb.configure_side_bar()
+            gridOptions = gb.build()
+            AgGrid(df_logs, gridOptions=gridOptions)
+        else:
+            st.write("No activity logs available.")
         # Download logs as CSV or text
         csv_logs = df_logs.to_csv(index=False).encode('utf-8')
         st.download_button(
@@ -219,7 +246,14 @@ else:
         # Display error logs
         df_errors = pd.DataFrame(st.session_state.errors)
         st.subheader('Error Logs')
-        AgGrid(df_errors)
+        if not df_errors.empty:
+            gb = GridOptionsBuilder.from_dataframe(df_errors)
+            gb.configure_pagination()
+            gb.configure_side_bar()
+            gridOptions = gb.build()
+            AgGrid(df_errors, gridOptions=gridOptions)
+        else:
+            st.write("No error logs available.")
         # Download error logs as CSV or text
         csv_errors = df_errors.to_csv(index=False).encode('utf-8')
         st.download_button(
@@ -283,4 +317,4 @@ else:
             st.plotly_chart(fig)
         else:
             st.write('No logs available for analytics.')
-        
+                        
