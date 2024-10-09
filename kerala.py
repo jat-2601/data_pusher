@@ -115,7 +115,7 @@ else:
         st.header('Manual Data Sender')
 
         # Hardcoded API URL for manual data sender
-        manual_api_url = 'http://103.135.130.119:80'
+        manual_api_url = 'http://210.212.237.164:8088'
 
         # Dropdown to choose input method
         input_method = st.selectbox('Input Method', ['Manual Entry', 'Extract from Format'])
