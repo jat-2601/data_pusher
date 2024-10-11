@@ -4,7 +4,7 @@ from datetime import datetime
 import pytz
 import pandas as pd
 import re
-import plotly.express as px
+#import plotly.express as px
 
 # Initialize logs and errors in session state
 if 'logs' not in st.session_state:
