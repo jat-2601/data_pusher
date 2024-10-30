@@ -8,7 +8,6 @@ import time
 import threading
 import folium
 from streamlit_folium import st_folium
-from geopy.geocoders import Nominatim
 import plotly.express as px
 
 # Initialize logs and errors in session state
@@ -95,6 +94,24 @@ def continuous_sending(imei_manual, latitude, longitude, duration, interval):
         send_manual_data(imei_manual, latitude, longitude)
         time.sleep(interval)
 
+# Function to get coordinates from Google Maps Geocoding API
+def get_coordinates(location):
+    api_key = 'YOUR_GOOGLE_MAPS_API_KEY'  # Replace with your Google Maps API key
+    base_url = 'https://maps.googleapis.com/maps/api/geocode/json'
+    params = {'address': location, 'key': api_key}
+    response = requests.get(base_url, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        if data['status'] == 'OK':
+            lat = data['results'][0]['geometry']['location']['lat']
+            lng = data['results'][0]['geometry']['location']['lng']
+            return lat, lng
+        else:
+            st.error('Error fetching coordinates: ' + data['status'])
+    else:
+        st.error('Error fetching coordinates: ' + response.reason)
+    return None, None
+
 # Main app
 st.title('State Backend Tool')
 
@@ -126,10 +143,9 @@ else:
     # Add a search button for location search
     location_search = st.text_input('Search Location')
     if st.button('Search'):
-        geolocator = Nominatim(user_agent="geoapiExercises")
-        location = geolocator.geocode(location_search)
-        if location:
-            map_center = [location.latitude, location.longitude]
+        latitude, longitude = get_coordinates(location_search)
+        if latitude and longitude:
+            map_center = [latitude, longitude]
             m = folium.Map(location=map_center, zoom_start=15)
             folium.Marker(location=map_center, popup=location_search).add_to(m)
         else:
@@ -163,7 +179,7 @@ else:
                     st.write(packet)
                 
                 # Send data packets to the server
-                if st.button('Send Data Packets'):
+                                if st.button('Send Data Packets'):
                     state_manual = st.selectbox('Select State for Manual Data', ['Kerala', 'Karnataka', 'Bengal'])
                     
                     # Set API URL based on selected state
