@@ -177,7 +177,9 @@ else:
                 st.write("Generated Data Packets:")
                 for packet in packets:
                     st.write(packet)
-                    if st.button('Send Data Packets'):
+                
+                # Send data packets to the server
+                if st.button('Send Data Packets'):
                     state_manual = st.selectbox('Select State for Manual Data', ['Kerala', 'Karnataka', 'Bengal'])
                     
                     # Set API URL based on selected state
@@ -199,7 +201,7 @@ else:
                             try:
                                 response_json = response.json()
                                 st.json(response_json)
-                                log_activity("Send Manual Data", "Success", f"Packet: {packet}, Response: {response_json}")
+                                                                log_activity("Send Manual Data", "Success", f"Packet: {packet}, Response: {response_json}")
                             except ValueError:
                                 st.write(response.text)
                                 log_activity("Send Manual Data", "Success", f"Packet: {packet}, Response: {response.text}")
