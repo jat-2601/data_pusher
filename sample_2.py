@@ -201,7 +201,7 @@ else:
                             try:
                                 response_json = response.json()
                                 st.json(response_json)
-                                                                log_activity("Send Manual Data", "Success", f"Packet: {packet}, Response: {response_json}")
+                                log_activity("Send Manual Data", "Success", f"Packet: {packet}, Response: {response_json}")
                             except ValueError:
                                 st.write(response.text)
                                 log_activity("Send Manual Data", "Success", f"Packet: {packet}, Response: {response.text}")
