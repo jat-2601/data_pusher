@@ -192,7 +192,7 @@ else:
                         except requests.exceptions.RequestException as e:
                             if "src property must be a valid json object" in str(e):
                                 st.success(f'Data sent successfully for packet: {packet}')
-                                                                log_activity("Send Manual Data", "Success", f"Packet: {packet}, Response: {e}")
+                                log_activity("Send Manual Data", "Success", f"Packet: {packet}, Response: {e}")
                             else:
                                 st.error(f'Data send failed for packet: {packet}, Error: {e}')
                                 log_activity("Send Manual Data", "Failed", f"Packet: {packet}, Error: {e}")
