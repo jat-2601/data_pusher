@@ -67,7 +67,7 @@ if not st.session_state.logged_in:
             st.error('Invalid credentials')
 else:
     # Tabs for different functionalities
-    tab1, tab2, tab3 = st.tabs(["Configure Endpoints", "Manual Data Sender", "Activity Logs"])
+    tab1, tab2 = st.tabs(["Configure Endpoints", "Manual Data Sender"])
     # Configure Endpoints section
     with tab1:
         st.header('Configure Endpoints')
@@ -166,57 +166,11 @@ else:
                     try:
                         response_json = response.json()
                         st.json(response_json)
-                        log_activity("Send Manual Data", "Success", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Response: {response_json}")
+                        log_activity("Send Manual Data", "Success", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {response_json}")
                     except ValueError:
                         st.write(response.text)
-                        log_activity("Send Manual Data", "Success", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Response: {response.text}")
+                        log_activity("Send Manual Data", "Success", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {response.text}")
                 except requests.exceptions.RequestException as e:
-                                        st.error(f'Manual data send failed: {e}')
-                    log_activity("Send Manual Data", "Failed", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Error: {e}")
+                    st.error(f'Manual data send failed: {e}')
+                    log_activity("Send Manual Data", "Failed", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {e}")
                     log_error("Send Manual Data", str(e))
-
-    # Activity Logs section
-    with tab3:
-        st.header('Activity Logs')
-        
-        # Display logs
-        df_logs = pd.DataFrame(st.session_state.logs)
-        st.subheader('Activity Logs')
-        st.dataframe(df_logs)
-        
-        # Download logs as CSV or text
-        csv_logs = df_logs.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="Download logs as CSV",
-            data=csv_logs,
-            file_name='activity_logs.csv',
-            mime='text/csv',
-        )
-        text_logs = df_logs.to_string(index=False)
-        st.download_button(
-            label="Download logs as Text",
-            data=text_logs,
-            file_name='activity_logs.txt',
-            mime='text/plain',
-        )
-        
-        # Display error logs
-        df_errors = pd.DataFrame(st.session_state.errors)
-        st.subheader('Error Logs')
-        st.dataframe(df_errors)
-        
-        # Download error logs as CSV or text
-        csv_errors = df_errors.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="Download error logs as CSV",
-            data=csv_errors,
-            file_name='error_logs.csv',
-            mime='text/csv',
-        )
-        text_errors = df_errors.to_string(index=False)
-        st.download_button(
-            label="Download error logs as Text",
-            data=text_errors,
-            file_name='error_logs.txt',
-            mime='text/plain',
-        )
