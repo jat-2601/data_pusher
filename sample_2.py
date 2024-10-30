@@ -8,7 +8,9 @@ import threading
 import folium
 from streamlit_folium import st_folium
 
-# Initialize errors in session state
+# Initialize logs and errors in session state
+if 'logs' not in st.session_state:
+    st.session_state.logs = []
 if 'errors' not in st.session_state:
     st.session_state.errors = []
 if 'stop_sending' not in st.session_state:
@@ -17,6 +19,17 @@ if 'stop_sending' not in st.session_state:
 # Function to check login credentials
 def check_credentials(username, password):
     return username == "admin" and password == "Sangwan@2002"
+
+# Function to log activity
+def log_activity(action, status, details):
+    now = datetime.now(pytz.timezone('Asia/Kolkata'))
+    log_entry = {
+        "Timestamp": now.strftime('%Y-%m-%d %H:%M:%S'),
+        "Action": action,
+        "Status": status,
+        "Details": details
+    }
+    st.session_state.logs.append(log_entry)
 
 # Function to log errors
 def log_error(action, error_message):
@@ -43,15 +56,9 @@ def extract_data_from_format(data_format):
         log_error("Extract Data", "Invalid format")
         return None, None, None
 
-# Function to send manual data
-def send_manual_data(imei_manual, latitude, longitude, state):
-    if state == 'Kerala':
-        manual_api_url = 'http://103.135.130.119:80'
-    elif state == 'Karnataka':
-        manual_api_url = 'http://210.212.237.164:8088'
-    elif state == 'West Bengal':
-        manual_api_url = 'http://117.221.20.174:80?vltdata'
-    
+# Function to send manual data for Kerala
+def send_manual_data_kerala(imei_manual, latitude, longitude):
+    manual_api_url = 'http://103.135.130.119:80'
     delhi_tz = pytz.timezone('Asia/Kolkata')
     now = datetime.now(delhi_tz)
     date_str = now.strftime('%d%m%y')
@@ -68,10 +75,69 @@ def send_manual_data(imei_manual, latitude, longitude, state):
         try:
             response_json = response.json()
             st.json(response_json)
+            log_activity("Send Manual Data", "Success", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Response: {response_json}")
         except ValueError:
             st.write(response.text)
+            log_activity("Send Manual Data", "Success", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Response: {response.text}")
     except requests.exceptions.RequestException as e:
         st.error(f'Manual data send failed for IMEI: {imei_manual}, Error: {e}')
+        log_activity("Send Manual Data", "Failed", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Error: {e}")
+        log_error("Send Manual Data", str(e))
+
+# Function to send manual data for Karnataka
+def send_manual_data_karnataka(imei_manual, latitude, longitude):
+    manual_api_url = 'http://210.212.237.164:8088'
+    delhi_tz = pytz.timezone('Asia/Kolkata')
+    now = datetime.now(delhi_tz)
+    date_str = now.strftime('%d%m%y')
+    time_str = now.strftime('%H%M%S')
+    packet = f'NRM{imei_manual}01L1{date_str}{time_str}0{latitude}N0{longitude}E404x950D2900DC06A72000.00000.0053001811M0827.00airtel'
+    data = {'vltdata': packet}
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+    
+    try:
+        response = requests.post(manual_api_url, data=data, headers=headers)
+        response.raise_for_status()
+        st.success(f'Manual data sent successfully for IMEI: {imei_manual}')
+        st.write(f"Packet Sent: {packet}")
+        try:
+            response_json = response.json()
+            st.json(response_json)
+            log_activity("Send Manual Data", "Success", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Response: {response_json}")
+        except ValueError:
+            st.write(response.text)
+            log_activity("Send Manual Data", "Success", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Response: {response.text}")
+    except requests.exceptions.RequestException as e:
+        st.error(f'Manual data send failed for IMEI: {imei_manual}, Error: {e}')
+        log_activity("Send Manual Data", "Failed", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Error: {e}")
+        log_error("Send Manual Data", str(e))
+
+# Function to send manual data for West Bengal
+def send_manual_data_west_bengal(imei_manual, latitude, longitude):
+    manual_api_url = 'http://117.221.20.174:80?vltdata'
+    delhi_tz = pytz.timezone('Asia/Kolkata')
+    now = datetime.now(delhi_tz)
+    date_str = now.strftime('%d%m%y')
+    time_str = now.strftime('%H%M%S')
+    packet = f'NRM{imei_manual}01L1{date_str}{time_str}0{latitude}N0{longitude}E404x950D2900DC06A72000.00000.0053001811M0827.00airtel'
+    data = {'vltdata': packet}
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+    
+    try:
+        response = requests.post(manual_api_url, data=data, headers=headers)
+        response.raise_for_status()
+        st.success(f'Manual data sent successfully for IMEI: {imei_manual}')
+        st.write(f"Packet Sent: {packet}")
+        try:
+            response_json = response.json()
+            st.json(response_json)
+            log_activity("Send Manual Data", "Success", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Response: {response_json}")
+        except ValueError:
+            st.write(response.text)
+            log_activity("Send Manual Data", "Success", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Response: {response.text}")
+    except requests.exceptions.RequestException as e:
+        st.error(f'Manual data send failed for IMEI: {imei_manual}, Error: {e}')
+        log_activity("Send Manual Data", "Failed", f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {longitude}, Error: {e}")
         log_error("Send Manual Data", str(e))
 
 # Function to handle continuous sending
@@ -80,7 +146,12 @@ def continuous_sending(imei_manual, latitude, longitude, duration, interval, sta
     while datetime.now() < end_time:
         if st.session_state.stop_sending:
             break
-        send_manual_data(imei_manual, latitude, longitude, state)
+        if state == 'Kerala':
+            send_manual_data_kerala(imei_manual, latitude, longitude)
+        elif state == 'Karnataka':
+            send_manual_data_karnataka(imei_manual, latitude, longitude)
+        elif state == 'West Bengal':
+            send_manual_data_west_bengal(imei_manual, latitude, longitude)
         time.sleep(interval)
 
 # Main app
@@ -100,64 +171,39 @@ if not st.session_state.logged_in:
         else:
             st.error('Invalid credentials')
 else:
-    # Single tab for IMEI input and map interaction
-    st.header('IMEI Input and Location Selection')
+    # Tabs for different functionalitie
+        tab4 = st.tabs(["Configure Endpoints", "Manual Data Sender", "Activity Logs", "Error Logs"])
 
-    # Input field for IMEI
-    imei_list = st.text_area('IMEIs (comma-separated)')
+    with tab1:
+        st.header("Configure Endpoints")
+        st.write("Endpoint configuration settings will go here.")
 
-    # Map for selecting coordinates
-    st.subheader('Select Location on Map')
-    map_center = [20.5937, 78.9629]  # Center of India
-    m = folium.Map(location=map_center, zoom_start=5)
-    
-    map_data = st_folium(m, width=700, height=500)
-    
-    if map_data['last_clicked']:
-        latitude = map_data['last_clicked']['lat']
-        longitude = map_data['last_clicked']['lng']
-        st.write(f"Selected Coordinates: Latitude = {latitude}, Longitude = {longitude}")
-        
-        # Generate data packet based on selected coordinates and IMEI list
-        if st.button('Generate Data Packet'):
-            imei_list_cleaned = [imei.strip() for imei in imei_list.split(',')]
-            packets = []
-            for imei in imei_list_cleaned:
-                if len(imei) == 15 and imei.isdigit():
-                    delhi_tz = pytz.timezone('Asia/Kolkata')
-                    now = datetime.now(delhi_tz)
-                    date_str = now.strftime('%d%m%y')
-                    time_str = now.strftime('%H%M%S')
-                    packet = f'NRM{imei}01L1{date_str}{time_str}0{latitude}N0{longitude}E404x950D2900DC06A72000.00000.0053001811M0827.00airtel'
-                    packets.append(packet)
-                else:
-                    st.error(f'Invalid IMEI: {imei}')
-            
-            if packets:
-                st.write("Generated Data Packets:")
-                for packet in packets:
-                    st.write(packet)
-                
-                # Send data packets to the server
-                state_manual = st.selectbox('Select State for Manual Data', ['Kerala', 'Karnataka', 'West Bengal'])
-                
-                if st.button('Send Data Packets'):
-                    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-                    
-                    for packet in packets:
-                        data = {'vltdata': packet}
-                        try:
-                            response = requests.post(manual_api_url, data=data, headers=headers)
-                            response.raise_for_status()
-                            st.success(f'Data sent successfully for packet: {packet}')
-                            try:
-                                response_json = response.json()
-                                st.json(response_json)
-                            except ValueError:
-                                st.write(response.text)
-                        except requests.exceptions.RequestException as e:
-                            if "src property must be a valid json object" in str(e):
-                                st.success(f'Data sent successfully for packet: {packet}')
-                            else:
-                                st.error(f'Data send failed for packet: {packet}, Error: {e}')
-                                log_error("Send Manual Data", str(e))
+    with tab2:
+        st.header("Manual Data Sender")
+        imei_manual = st.text_input('IMEI')
+        latitude = st.text_input('Latitude')
+        longitude = st.text_input('Longitude')
+        state = st.selectbox('State', ['Kerala', 'Karnataka', 'West Bengal'])
+        if st.button('Send Data'):
+            if state == 'Kerala':
+                send_manual_data_kerala(imei_manual, latitude, longitude)
+            elif state == 'Karnataka':
+                send_manual_data_karnataka(imei_manual, latitude, longitude)
+            elif state == 'West Bengal':
+                send_manual_data_west_bengal(imei_manual, latitude, longitude)
+
+        duration = st.number_input('Duration (minutes)', min_value=1, max_value=60, value=10)
+        interval = st.number_input('Interval (seconds)', min_value=1, max_value=60, value=10)
+        if st.button('Start Continuous Sending'):
+            st.session_state.stop_sending = False
+            threading.Thread(target=continuous_sending, args=(imei_manual, latitude, longitude, duration, interval, state)).start()
+        if st.button('Stop Continuous Sending'):
+            st.session_state.stop_sending = True
+
+    with tab3:
+        st.header("Activity Logs")
+        st.write(st.session_state.logs)
+
+    with tab4:
+        st.header("Error Logs")
+        st.write(st.session_state.errors)
