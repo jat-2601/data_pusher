@@ -177,9 +177,8 @@ else:
                 st.write("Generated Data Packets:")
                 for packet in packets:
                     st.write(packet)
-                
-                # Send data packets to the server
-                                if st.button('Send Data Packets'):
+                    
+                    if st.button('Send Data Packets'):
                     state_manual = st.selectbox('Select State for Manual Data', ['Kerala', 'Karnataka', 'Bengal'])
                     
                     # Set API URL based on selected state
