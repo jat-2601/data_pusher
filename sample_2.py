@@ -177,7 +177,6 @@ else:
                 st.write("Generated Data Packets:")
                 for packet in packets:
                     st.write(packet)
-                    
                     if st.button('Send Data Packets'):
                     state_manual = st.selectbox('Select State for Manual Data', ['Kerala', 'Karnataka', 'Bengal'])
                     
