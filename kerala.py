@@ -108,42 +108,68 @@ else:
                     log_error("Send Request", str(e))
 
     # Manual Data Sender section
-    with tab2:
-        st.header('Manual Data Sender')
+with tab2:
+    st.header('Manual Data Sender')
 
-        # Dropdown to choose input method
-        input_method = st.selectbox('Input Method', ['Manual Entry', 'Extract from Format'])
+    # Dropdown to choose input method
+    input_method = st.selectbox('Input Method', ['Manual Entry', 'Extract from Format'])
 
-        if input_method == 'Manual Entry':
-            # Input fields for parameters
-            imei_list = st.text_area('IMEIs (comma-separated)')
-            latitude = st.text_input('Latitude')
-            longitude = st.text_input('Longitude')
+    if input_method == 'Manual Entry':
+        # Input fields for parameters
+        imei_list = st.text_area('IMEIs (comma-separated)')
+        latitude = st.text_input('Latitude')
+        longitude = st.text_input('Longitude')
+    else:
+        data_format = st.text_area('Data Format')
+
+    if st.button('Send Manual Data'):
+        if input_method == 'Extract from Format':
+            imei_manual, latitude, longitude = extract_data_from_format(data_format)
+            if not imei_manual or not latitude or not longitude:
+                st.error('Failed to extract data from format.')
+                log_activity("Send Manual Data", "Failed", "Failed to extract data from format")
+                return  # Exit early if extraction fails
+
+        # Check if imei_list is not empty or None
+        if imei_list:
+            # Clean and split IMEI list
+            imei_list = [imei.strip() for imei in imei_list.split(',')]
         else:
-            data_format = st.text_area('Data Format')
+            st.error('Please enter at least one IMEI number.')
+            log_activity("Send Manual Data", "Failed", "No IMEI numbers provided")
+            return  # Exit early if no IMEI is provided
 
-        if st.button('Send Manual Data'):
-            if input_method == 'Extract from Format':
-                imei_manual, latitude, longitude = extract_data_from_format(data_format)
-                if not imei_manual or not latitude or not longitude:
-                    st.error('Failed to extract data from format.')
-                    log_activity("Send Manual Data", "Failed", "Failed to extract data from format")
-                    return  # Exit early if extraction fails
+        for imei_manual in imei_list:
+            if len(imei_manual) != 15 or not imei_manual.isdigit():
+                st.error(f'IMEI must be a 15-digit number: {imei_manual}')
+                log_activity("Send Manual Data", "Failed", f"Invalid IMEI: {imei_manual}")
+                continue  # Skip to the next IMEI
 
-            # Check if imei_list is not empty or None
-            if imei_list:
-                # Clean and split IMEI list
-                imei_list = [imei.strip() for imei in imei_list.split(',')]
-            else:
-                st.error('Please enter at least one IMEI number.')
-                log_activity("Send Manual Data", "Failed", "No IMEI numbers provided")
-                return  # Exit early if no IMEI is provided
+            # Get current date and time in Delhi timezone
+            delhi_tz = pytz.timezone('Asia/Kolkata')
+            now = datetime.now(delhi_tz)
+            date_str = now.strftime('%d%m%y')
+            time_str = now.strftime('%H%M%S')
 
-            for imei_manual in imei_list:
-                if len(imei_manual) != 15 or not imei_manual.isdigit():
-                    st.error(f'IMEI must be a 15-digit number: {imei_manual}')
-                    log_activity("Send Manual Data", "Failed", f"Invalid IMEI: {imei_manual}")
-                    continue  # Skip to the next IMEI
+            # Format the packet
+            packet = f'NRM{imei_manual}01L1{date_str}{time_str}0{latitude}N0{longitude}E404x950D2900DC06A72000.00000.0053001811M0827.00airtel'
+            data = {'vltdata': packet}
+            headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+            try:
+                response = requests.post(api_url, data=data, headers=headers)
+                response.raise_for_status()
+                st.success(f'Manual data sent successfully for IMEI: {imei_manual}')
+                st.write(f"Packet Sent: {packet}")
+                response_json = response.json()
+                st.json(response_json)
+                log_activity("Send Manual Data", "Success",
+                             f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {response_json}")
+            except requests.exceptions.RequestException as e:
+                st.error(f'Manual data send failed for IMEI: {imei_manual}, Error: {e}')
+                log_activity("Send Manual Data", "Failed",
+                             f"IMEI: {imei_manual}, Latitude: {latitude}, Longitude: {e}")
+                log_error("Send Manual Data", str(e))
 
                 # Get current date and time in Delhi timezone
                 delhi_tz = pytz.timezone('Asia/Kolkata')
