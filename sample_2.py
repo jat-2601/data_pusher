@@ -77,11 +77,11 @@ else:
 
         # Set API URL based on selected state
         if state == 'Kerala':
-            api_url = 'http://103.135.130.119:80'
+            api_url = 'http://34.194.133.72:8888/update'
         elif state == 'Karnataka':
-            api_url = 'http://210.212.237.164:8088'
+            api_url = 'http://34.194.133.72:8888/update'
         elif state == 'Bengal':
-            api_url = 'http://117.221.20.174:80?vltdata'
+            api_url = 'http://34.194.133.72:8888/update'
 
         # Input fields for parameters
         imei = st.text_input('IMEI (15 digits)', max_chars=15)
